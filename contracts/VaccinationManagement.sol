@@ -42,8 +42,8 @@ contract VaccinationManagement {
     // MARK: - 생성자
     // 해당 컨트랙트가 만들어질 떄, 백신에 대한 정보 저장
     constructor() {
-        _addVaccination("vaccine1", 2);
-        _addVaccination("vaccine1", 2);
+        _addVaccination("vaccine1", 0);
+        _addVaccination("vaccine1", 0);
     }
 
     // MARK: - 내부 함수
@@ -175,12 +175,12 @@ contract VaccinationManagement {
 
     // 자식의 정보를 리턴하는 함수
     // 해당 데이터에 예방접종과 관련된 정보는 모두 포함
+    // 테스트 완료
     function returnChildInformation() public view returns (Child[] memory) {
         return parentToChild[msg.sender];
     }
 
     // 아이 생성 및 부모 연동
-    //
     // 테스트 완료
     function addChild(string memory _name, uint256 _birthDate) public {
         address childAddress = _generateChildAddress(_name, _birthDate);
@@ -204,6 +204,7 @@ contract VaccinationManagement {
     }
 
     // 백신 접종 기록 추가
+    // 테스트 완료 
     function updateChildVaccination(
         string memory _name,
         string memory _vaccineName
