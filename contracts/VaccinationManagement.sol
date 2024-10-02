@@ -21,7 +21,7 @@ contract VaccinationManagement {
         address childAddress;
         string name;
         uint256 birthDate;
-        uint8 babyMonth; // 개월 수
+        uint16 babyMonth; // 개월 수
         Vaccination[] vaccinations;
     }
 
@@ -82,100 +82,78 @@ contract VaccinationManagement {
             );
     }
 
-    // 윤년 계싼을 위한 일 수 계산
-    function _getTodayDate() public view returns (uint256) {
-        uint256 SECONDS_PER_DAY = 24 * 60 * 60; // 하루의 초 단위 시간 (86400초)
-        uint256 OFFSET1970 = 2440588; // Julian Date의 1970-01-01 기준
-        uint8[12] memory daysInMonth = [
-            31,
-            28,
-            31,
-            30,
-            31,
-            30,
-            31,
-            31,
-            30,
-            31,
-            30,
-            31
-        ]; // 각 월의 일 수
-
-        // 유닉스 타임스탬프를 기준으로 한 경과 일수 계산
-        uint256 daysSinceEpoch = block.timestamp / SECONDS_PER_DAY;
-        uint256 _days = daysSinceEpoch + OFFSET1970; // Julian Day로 변환
+    function unixToYYYYMMDD(uint256 unixTime) public pure returns (uint256) {
+        uint256 secondsInADay = 86400; // 하루의 초 수
+        uint256 totalDays = unixTime / secondsInADay; // 총 일수
+        uint256 year = 1970; // 시작 연도
+        uint256 daysInYear;
 
         // 연도 계산
-        uint256 year = (_days * 400) / 146097; // 대략적인 연도 계산
-        uint256 daysBeforeYear = (year * 365) +
-            (year / 4) -
-            (year / 100) +
-            (year / 400); // 윤년 고려한 연도 시작 일수
-
-        // 정확한 연도 찾기
-        while (_days < daysBeforeYear) {
-            year--;
-            daysBeforeYear =
-                (year * 365) +
-                (year / 4) -
-                (year / 100) +
-                (year / 400);
-        }
-        while (
-            _days >=
-            daysBeforeYear +
-                365 +
-                (
-                    (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
-                        ? 1
-                        : 0
-                )
-        ) {
+        while (totalDays >= (daysInYear = isLeapYear(year) ? 366 : 365)) {
+            totalDays -= daysInYear;
             year++;
-            daysBeforeYear =
-                (year * 365) +
-                (year / 4) -
-                (year / 100) +
-                (year / 400);
         }
 
-        // 윤년 여부 체크하여 2월의 일수를 조정
-        bool isLeapYear = (year % 4 == 0 &&
-            (year % 100 != 0 || year % 400 == 0));
-        if (isLeapYear) {
-            daysInMonth[1] = 29;
-        }
-
-        // 연도 시작부터의 일수 계산
-        uint256 dayOfYear = _days - daysBeforeYear;
-
-        // 월과 일을 계산
-        uint256 month;
+        // 월과 일 계산
+        uint256 month = 1;
         uint256 day;
-        for (uint256 i = 0; i < 12; i++) {
-            if (dayOfYear < daysInMonth[i]) {
-                month = i + 1; // 월은 1부터 시작
-                day = dayOfYear + 1; // 일은 1부터 시작
+
+        // 각 월의 일수
+        while (true) {
+            uint256 daysInMonth = getDaysInMonth(month, year);
+            if (totalDays < daysInMonth) {
+                day = totalDays + 1; // 1-indexed로 변환
                 break;
             }
-            dayOfYear -= daysInMonth[i];
+            totalDays -= daysInMonth;
+            month++;
         }
 
-        // YYYYMMDD 형식으로 날짜 반환
-        return year * 10000 + month * 100 + day;
+        // YYYYMMDD 형식으로 변환
+        return (year * 10000) + (month * 100) + day;
+    }
+
+    function getDaysInMonth(uint256 month, uint256 year) private pure returns (uint256) {
+        if (month == 2) {
+            return isLeapYear(year) ? 29 : 28;
+        } else if (month <= 7) {
+            return (month % 2 == 0) ? 30 : 31;
+        } else {
+            return (month % 2 == 0) ? 31 : 30;
+        }
+    }
+
+    function isLeapYear(uint256 year) private pure returns (bool) {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     }
 
     // 자식의 나이를 계산하는 함수 (리턴하는 값은 개월 수로 리턴이 됨)
-    function _caculateBabyMonth(
-        uint256 birthDate
-    ) internal view returns (uint8) {
-        uint256 today = _getTodayDate();
-        require(birthDate <= today, "Birth date must be in the past.");
+    function _caculateBabyMonth(uint256 birthDate) internal view returns (uint16) {
+        require(birthDate <= block.timestamp, "Birth date must be in the past."); // Check if birth date is valid
 
-        uint256 ageInSec = today - birthDate;
+        // Convert current time to YYYYMMDD
+        uint256 today = unixToYYYYMMDD(block.timestamp);
+        
+        // Extract year, month, and day from birthDate and today
+        uint256 yearToday = today / 10000;
+        uint256 monthToday = (today / 100) % 100;
+        uint256 dayToday = today % 100;
 
-        // 30일을 기준으로 개월 수를 구분하였음.
-        return uint8(ageInSec);
+        uint256 yearBirth = birthDate / 10000;
+        uint256 monthBirth = (birthDate / 100) % 100;
+        uint256 dayBirth = birthDate % 100;
+
+        // Calculate differences
+        require(yearToday >= yearBirth, "Year difference invalid."); // Ensures today is later than birth year
+
+        uint16 totalMonths = uint16((yearToday - yearBirth) * 12 + (monthToday - monthBirth));
+
+        // Adjust for day of month
+        if (dayToday < dayBirth) {
+            totalMonths -= 1; // Not a full month
+        }
+
+        return totalMonths; // Ensure this is within uint8 range (0-255)
     }
 
     // MARK: - 업데이트 함수

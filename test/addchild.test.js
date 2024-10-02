@@ -30,8 +30,6 @@ describe("Add children", () => {
     await vaacinationManager.addChild("병", 20240928);
     const childInformation = await vaacinationManager.returnChildInformation();
 
-    console.log(await vaacinationManager._getTodayDate());
-
     console.log("-------자식 정보 추출-------");
     for (let index = 0; index < childInformation.length; index++) {
       console.log("자식 주소 : ", childInformation[index].childAddress);
