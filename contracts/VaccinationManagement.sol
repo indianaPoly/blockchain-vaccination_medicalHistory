@@ -4,25 +4,64 @@ pragma solidity ^0.8.0;
 // v1.0.0 : 1명의 예방접종 주기에 대한 개발진행
 
 contract VaccinationManagement {
+    // MARK: - 구조체 정의
+    // 건강 정보
+    // 소수점 지원이 안되는 것을 고려하여 *100 진행을 하여 값을 저장해야 함.
+    // 섞어서 사용하는 것 보다 맞추는게 더 효율적으로 메모리 관리 가능
+    // ex. 10170 => 101.70 cm
+    // ex. 683 => 6.83 kg
+    // ex. 150 => 1.5
+    // ex. 200 => 2.0
+    struct HealthInformation {
+        uint16 height;
+        uint16 weight;
+        uint16 visionL;
+        uint16 visionR;
+    }
+
     enum VaccinationStatus {
         Pending,
         Completed
     }
-
+    // 예방접종 구조체
     struct Vaccination {
+        uint8 index; // 백신의 인덱스 저장 (중첩 안됨)
         string vaccineName; // 백신이름
+        uint8 vaccineChapter; // 백신 차수
         uint8 recommendedAge; // 권장접종나이 (개월로 반푤)
         uint8 daysUntilVaccination; // 백신까지 남은 일수
         VaccinationStatus status; // 접종상태 (대기 중, 완료)
         uint256 administeredDate; // 접종 완료 일자
     }
 
+    // 진료 기록
+    enum MedicalType {
+        Outpatient, // 외래
+        Emergency, // 응급
+        Inpatient, // 입원
+        Examination // 검사
+    }
+    struct MedicalHistory {
+        uint16 index;
+        uint256 timestamp;
+        string diagnosis; // 진료 내용
+        string perscription; // 처방 내용 (처방 내역에 대한 관리)
+        MedicalType medicalType; // 진료 유형
+        string visitedHospital; // 방문한 병원
+        string doctorName; // 의사 이름
+        uint256 cost; // 병원 비용
+        bool usedInsurance; // 보험 사용 여부
+    }
+
+    // 자식 구조체
     struct Child {
-        address childAddress;
-        string name;
-        uint256 birthDate;
+        address childAddress; // 아이의 주소
+        string name; // 아이의 이름
+        uint256 birthDate; // 아이의 생일
         uint16 babyMonth; // 개월 수
-        Vaccination[] vaccinations;
+        HealthInformation healthInformation; // 건강정보 저장
+        Vaccination[] vaccinations; // 예방 접종 종류
+        MedicalHistory[] medicalHistory; // 진료 내역 저장
     }
 
     // 권장 예방접종 목록 저장 배열
@@ -42,20 +81,24 @@ contract VaccinationManagement {
     // MARK: - 생성자
     // 해당 컨트랙트가 만들어질 떄, 백신에 대한 정보 저장
     constructor() {
-        _addVaccination("vaccine1", 0);
-        _addVaccination("vaccine1", 0);
+        _addVaccination(1, "vaccine1", 1, 0);
+        _addVaccination(2, "vaccine1", 2, 0);
     }
 
     // MARK: - 내부 함수
     // 새로운 접종을 권장 목록에 추가하는 내부 함수
     // 테스트 완료
     function _addVaccination(
+        uint8 _index,
         string memory _vaccineName,
+        uint8 _chapter,
         uint8 _recommendedAge
     ) public {
         recommendedVaccinations.push(
             Vaccination({
+                index: _index,
                 vaccineName: _vaccineName,
+                vaccineChapter: _chapter,
                 recommendedAge: _recommendedAge,
                 daysUntilVaccination: 0,
                 status: VaccinationStatus.Pending,
@@ -82,14 +125,31 @@ contract VaccinationManagement {
             );
     }
 
-    function unixToYYYYMMDD(uint256 unixTime) public pure returns (uint256) {
+    function _getDaysInMonth(
+        uint256 month,
+        uint256 year
+    ) internal pure returns (uint256) {
+        if (month == 2) {
+            return _isLeapYear(year) ? 29 : 28;
+        } else if (month <= 7) {
+            return (month % 2 == 0) ? 30 : 31;
+        } else {
+            return (month % 2 == 0) ? 31 : 30;
+        }
+    }
+
+    function _isLeapYear(uint256 year) internal pure returns (bool) {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    }
+
+    function _unixToYYYYMMDD(uint256 unixTime) internal pure returns (uint256) {
         uint256 secondsInADay = 86400; // 하루의 초 수
         uint256 totalDays = unixTime / secondsInADay; // 총 일수
         uint256 year = 1970; // 시작 연도
         uint256 daysInYear;
 
         // 연도 계산
-        while (totalDays >= (daysInYear = isLeapYear(year) ? 366 : 365)) {
+        while (totalDays >= (daysInYear = _isLeapYear(year) ? 366 : 365)) {
             totalDays -= daysInYear;
             year++;
         }
@@ -100,7 +160,7 @@ contract VaccinationManagement {
 
         // 각 월의 일수
         while (true) {
-            uint256 daysInMonth = getDaysInMonth(month, year);
+            uint256 daysInMonth = _getDaysInMonth(month, year);
             if (totalDays < daysInMonth) {
                 day = totalDays + 1; // 1-indexed로 변환
                 break;
@@ -113,27 +173,18 @@ contract VaccinationManagement {
         return (year * 10000) + (month * 100) + day;
     }
 
-    function getDaysInMonth(uint256 month, uint256 year) private pure returns (uint256) {
-        if (month == 2) {
-            return isLeapYear(year) ? 29 : 28;
-        } else if (month <= 7) {
-            return (month % 2 == 0) ? 30 : 31;
-        } else {
-            return (month % 2 == 0) ? 31 : 30;
-        }
-    }
-
-    function isLeapYear(uint256 year) private pure returns (bool) {
-        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-    }
-
     // 자식의 나이를 계산하는 함수 (리턴하는 값은 개월 수로 리턴이 됨)
-    function _caculateBabyMonth(uint256 birthDate) internal view returns (uint16) {
-        require(birthDate <= block.timestamp, "Birth date must be in the past."); // Check if birth date is valid
+    function _caculateBabyMonth(
+        uint256 birthDate
+    ) internal view returns (uint16) {
+        require(
+            birthDate <= block.timestamp,
+            "Birth date must be in the past."
+        ); // Check if birth date is valid
 
         // Convert current time to YYYYMMDD
-        uint256 today = unixToYYYYMMDD(block.timestamp);
-        
+        uint256 today = _unixToYYYYMMDD(block.timestamp);
+
         // Extract year, month, and day from birthDate and today
         uint256 yearToday = today / 10000;
         uint256 monthToday = (today / 100) % 100;
@@ -146,7 +197,9 @@ contract VaccinationManagement {
         // Calculate differences
         require(yearToday >= yearBirth, "Year difference invalid."); // Ensures today is later than birth year
 
-        uint16 totalMonths = uint16((yearToday - yearBirth) * 12 + (monthToday - monthBirth));
+        uint16 totalMonths = uint16(
+            (yearToday - yearBirth) * 12 + (monthToday - monthBirth)
+        );
 
         // Adjust for day of month
         if (dayToday < dayBirth) {
@@ -204,7 +257,7 @@ contract VaccinationManagement {
     }
 
     // 백신 접종 기록 추가
-    // 테스트 완료 
+    // 테스트 완료
     function updateChildVaccination(
         string memory _name,
         string memory _vaccineName
