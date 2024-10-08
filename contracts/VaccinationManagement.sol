@@ -71,11 +71,20 @@ contract VaccinationManagement {
     mapping(address => address) private childToParent;
 
     // 이벤트 추가
+    // 자식이 추가 되었을 때 발생되는 이벤트
     event ChildAdded(address indexed parent, address childAddress);
+
+    // 자식의 예방접종이 업데이트가 되었을 때 발생되는 이벤트
     event VaccinationUpdated(
         address indexed childAddress,
         string vaccineName,
         uint256 date
+    );
+
+    // 자식과 정상적으로 연동이 되었을 때 발생하는 코드
+    event ChildLinkedToParent(
+        address indexed parent,
+        address indexed childAddress
     );
 
     // MARK: - 생성자
@@ -209,32 +218,49 @@ contract VaccinationManagement {
         return totalMonths; // Ensure this is within uint8 range (0-255)
     }
 
-    // MARK: - 업데이트 함수
-
-    // 자식의 나이를 업데이트하는 함수
-    // 나이를 업데이트할 때 동시에 백신 일정도 같이 업데이트가 진행
-    function updateAllChildrenAges() public {
-        Child[] storage childrens = parentToChild[msg.sender];
-        require(childrens.length != 0, "Children not Found for the parent");
-
-        for (uint i = 0; i < childrens.length; i++) {
-            childrens[i].babyMonth = _caculateBabyMonth(childrens[i].birthDate);
+    // 자식의 주소로 자식을 찾는 내부 함수
+    function _findChildIndex(
+        address childAddress
+    ) internal view returns (uint) {
+        Child[] storage children = parentToChild[childToParent[childAddress]];
+        for (uint i = 0; i < children.length; i++) {
+            if (children[i].childAddress == childAddress) {
+                return i;
+            }
         }
-
-        return;
+        revert("Child not found");
     }
 
     // MARK: - 정보 리턴 함수
 
     // 자식의 정보를 리턴하는 함수
-    // 해당 데이터에 예방접종과 관련된 정보는 모두 포함
-    // 테스트 완료
+    // 해당 데이터에 예방접종과 관련된 정보는 모두 포함 (테스트 완료)
     function returnChildInformation() public view returns (Child[] memory) {
         return parentToChild[msg.sender];
     }
 
-    // 아이 생성 및 부모 연동
-    // 테스트 완료
+    // 자식의 address를 반환하는 코드
+    function returnChildAddress(
+        string memory _name
+    ) public view returns (address) {
+        Child[] storage children = parentToChild[msg.sender];
+        require(children.length > 0, "No children found");
+
+        for (uint i = 0; i < children.length; i++) {
+            if (
+                keccak256(abi.encodePacked(children[i].name)) ==
+                keccak256(abi.encodePacked(_name))
+            ) {
+                return children[i].childAddress;
+            }
+        }
+
+        revert("child with the give name not found");
+    }
+
+    // MARK: - 아이 추가, 연동
+
+    // 아이 생성 (테스트 완료)
     function addChild(string memory _name, uint256 _birthDate) public {
         address childAddress = _generateChildAddress(_name, _birthDate);
 
@@ -254,6 +280,48 @@ contract VaccinationManagement {
         childToParent[childAddress] = msg.sender;
 
         emit ChildAdded(msg.sender, childAddress);
+    }
+
+    // 아이 연동 함수
+    function linkChildToParent(address childAddress) external {
+        // 자식 존재 여부
+        require(childToParent[childAddress] != address(0), "Child not found");
+
+        //
+        Child[] storage children = parentToChild[msg.sender];
+
+        // 자식 주소가 이미 연동이 되어있는지를 확인
+        for (uint i = 0; i < children.length; i++) {
+            require(
+                children[i].childAddress != childAddress,
+                "Already linked to this child"
+            );
+        }
+
+        Child storage child = parentToChild[childToParent[childAddress]][
+            _findChildIndex(childAddress)
+        ];
+
+        // 새 부모에게도 자식 리스트에 추가
+        parentToChild[msg.sender].push(child);
+
+        // 새로운 부모와 자식 연동
+        emit ChildLinkedToParent(msg.sender, childAddress);
+    }
+
+    // MARK: - 업데이트 함수
+
+    // 자식의 나이를 업데이트하는 함수
+    // 나이를 업데이트할 때 동시에 백신 일정도 같이 업데이트가 진행
+    function updateAllChildrenAges() public {
+        Child[] storage childrens = parentToChild[msg.sender];
+        require(childrens.length != 0, "Children not Found for the parent");
+
+        for (uint i = 0; i < childrens.length; i++) {
+            childrens[i].babyMonth = _caculateBabyMonth(childrens[i].birthDate);
+        }
+
+        return;
     }
 
     // 백신 접종 기록 추가
