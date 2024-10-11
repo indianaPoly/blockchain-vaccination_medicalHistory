@@ -27,11 +27,19 @@ contract VaccinationManagement {
     struct Vaccination {
         uint8 index; // 백신의 인덱스 저장 (중첩 안됨)
         string vaccineName; // 백신이름
+        string targetDisease; // 백신이 예방하는 대상 질병
         uint8 vaccineChapter; // 백신 차수
         uint8 recommendedAge; // 권장접종나이 (개월로 반푤)
-        uint8 daysUntilVaccination; // 백신까지 남은 일수
+        uint8 recommendedEndAge; // 접종이 가능한 나이의 최대 범위 (개월 단위)
+        uint256 startVaccinationDate; // 접종이 가능한 시작일
+        uint256 endVaccinationDate; // 접종이 가능한 종료일
         VaccinationStatus status; // 접종상태 (대기 중, 완료)
         uint256 administeredDate; // 접종 완료 일자
+    }
+    // 백신상태 정보를 담는 구조체
+    struct VaccinationInfomation {
+        Vaccination[] completed;
+        Vaccination[] pending;
     }
 
     // 진료 기록
@@ -89,9 +97,30 @@ contract VaccinationManagement {
 
     // MARK: - 생성자
     // 해당 컨트랙트가 만들어질 떄, 백신에 대한 정보 저장
+    // index, 백신종류, 대상 감염병, 차수, 접종 나이, 마감일
     constructor() {
-        _addVaccination(1, "vaccine1", 1, 0);
-        _addVaccination(2, "vaccine1", 2, 0);
+        _addVaccination(1, "BCG", unicode"결핵", 1, 0, 1);
+        _addVaccination(2, "HepB", unicode"B형간염", 1, 0, 1);
+        _addVaccination(3, "HepB", unicode"B형간염", 2, 1, 2);
+        _addVaccination(4, "DTap", unicode"디프테리아 파상풍 백일해", 1, 2, 3);
+        _addVaccination(5, "IPV", unicode"폴리오", 1, 2, 3);
+        _addVaccination(6, "Hib", unicode"b형헤모필루스인플루엔자", 1, 2, 3);
+        _addVaccination(7, "PCV", unicode"폐렴구균", 1, 2, 3);
+        _addVaccination(8, "RV1", unicode"로타바이러스 감염증", 1, 2, 3);
+        _addVaccination(9, "RV5", unicode"로타바이러스 감염증", 1, 2, 3);
+        _addVaccination(10, "DTap", unicode"디프테리아 파상풍 백일해", 2, 4, 5);
+        _addVaccination(11, "IPV", unicode"폴리오", 2, 4, 5);
+        _addVaccination(12, "Hib", unicode"b형헤모필루스인플루엔자", 2, 4, 5);
+        _addVaccination(13, "PCV", unicode"폐렴구균", 2, 4, 5);
+        _addVaccination(14, "RV1", unicode"로타바이러스 감염증", 2, 4, 5);
+        _addVaccination(18, "RV5", unicode"로타바이러스 감염증", 2, 4, 5);
+        _addVaccination(19, "HepB", unicode"B형간염", 3, 6, 7);
+        _addVaccination(20, "DTap", unicode"디프테리아 파상풍 백일해", 3, 6, 7);
+        // _addVaccination(21, "IPV", unicode"폴리오", 3, 6); , 기간이 존재하는 것에 대해서 어떻게 처리할지 고민해야됨.
+        _addVaccination(22, "Hib", unicode"b형헤모필루스인플루엔자", 3, 6, 7);
+        _addVaccination(23, "PCV", unicode"폐렴구균", 2, 6, 7);
+        _addVaccination(24, "RV5", unicode"로타바이러스 감염증", 3, 6, 7);
+        // _addVaccination(2, "DTap", unicode"디프테리아 파상풍 백일해", 4, 6);
     }
 
     // MARK: - 내부 함수
@@ -100,16 +129,21 @@ contract VaccinationManagement {
     function _addVaccination(
         uint8 _index,
         string memory _vaccineName,
+        string memory _targetDisease,
         uint8 _chapter,
-        uint8 _recommendedAge
+        uint8 _recommendedAge,
+        uint8 _recommendedEndAge
     ) public {
         recommendedVaccinations.push(
             Vaccination({
                 index: _index,
                 vaccineName: _vaccineName,
+                targetDisease: _targetDisease,
                 vaccineChapter: _chapter,
                 recommendedAge: _recommendedAge,
-                daysUntilVaccination: 0,
+                recommendedEndAge: _recommendedEndAge,
+                startVaccinationDate: 0,
+                endVaccinationDate: 0,
                 status: VaccinationStatus.Pending,
                 administeredDate: 0
             })
@@ -218,6 +252,13 @@ contract VaccinationManagement {
         return totalMonths; // Ensure this is within uint8 range (0-255)
     }
 
+    function _caculateVaccinationDate(
+        uint256 birthDate,
+        uint8 monthAfterBirth
+    ) internal pure returns (uint256) {
+        return birthDate + (monthAfterBirth * 30 days);
+    }
+
     // 자식의 주소로 자식을 찾는 내부 함수
     function _findChildIndex(
         address childAddress
@@ -237,6 +278,63 @@ contract VaccinationManagement {
     // 해당 데이터에 예방접종과 관련된 정보는 모두 포함 (테스트 완료)
     function returnChildInformation() public view returns (Child[] memory) {
         return parentToChild[msg.sender];
+    }
+
+    function returnChildVaccinationStatus(
+        string memory _name
+    ) public view returns (VaccinationInfomation memory) {
+        Child[] storage children = parentToChild[msg.sender];
+        require(children.length > 0, "No children found");
+
+        bool childFound = false;
+        uint childIndex;
+        // 자식의 이름이 있는 경우에 대해서
+        for (uint i = 0; i < children.length; i++) {
+            if (
+                keccak256(abi.encodePacked(children[i].name)) ==
+                keccak256(abi.encodePacked(_name))
+            ) {
+                childFound = true;
+                childIndex = i;
+                break;
+            }
+        }
+
+        require(childFound, "child with the given name not found");
+
+        // Completed와 Pending 배열의 크기를 계산
+        uint completedCount = 0;
+        uint pendingCount = 0;
+        Vaccination[] storage vaxs = children[childIndex].vaccinations;
+
+        for (uint i = 0; i < vaxs.length; i++) {
+            if (vaxs[i].status == VaccinationStatus.Completed) {
+                completedCount++;
+            } else if (vaxs[i].status == VaccinationStatus.Pending) {
+                pendingCount++;
+            }
+        }
+
+        // VaccinationInfo 구조체에 있는 completed, pending 배열 크기 할당
+        VaccinationInfomation memory vaxInfo;
+        vaxInfo.completed = new Vaccination[](completedCount);
+        vaxInfo.pending = new Vaccination[](pendingCount);
+
+        uint completedIndex = 0;
+        uint pendingIndex = 0;
+
+        // 데이터를 분류하여 배열에 넣음
+        for (uint i = 0; i < vaxs.length; i++) {
+            if (vaxs[i].status == VaccinationStatus.Completed) {
+                vaxInfo.completed[completedIndex] = vaxs[i];
+                completedIndex++;
+            } else if (vaxs[i].status == VaccinationStatus.Pending) {
+                vaxInfo.pending[pendingIndex] = vaxs[i];
+                pendingIndex++;
+            }
+        }
+
+        return vaxInfo;
     }
 
     // 자식의 address를 반환하는 코드
@@ -273,7 +371,22 @@ contract VaccinationManagement {
 
         // 자식의 나이에 따라서 백신의 남은 일수도 같이 업데이트가 되어야 함. (수정 필요)
         for (uint i = 0; i < recommendedVaccinations.length; i++) {
-            newChild.vaccinations.push(recommendedVaccinations[i]);
+            Vaccination memory vax = recommendedVaccinations[i];
+
+            uint256 startVaxDate = _caculateVaccinationDate(
+                _birthDate,
+                vax.recommendedAge
+            );
+
+            uint256 endVaxDate = _caculateVaccinationDate(
+                _birthDate,
+                vax.recommendedEndAge
+            );
+
+            vax.startVaccinationDate = startVaxDate;
+            vax.endVaccinationDate = endVaxDate;
+
+            newChild.vaccinations.push(vax);
         }
 
         // 자식 주소를 통해서 부모 확인하기
@@ -331,8 +444,6 @@ contract VaccinationManagement {
         string memory _vaccineName
     ) external {
         // 자식이 확인이 되지 않으면 에러를 발생
-        require(parentToChild[msg.sender].length != 0, "empty child");
-
         Child[] storage childrens = parentToChild[msg.sender];
         require(childrens.length != 0, "empty child");
 
@@ -344,40 +455,35 @@ contract VaccinationManagement {
                 keccak256(abi.encodePacked(_name))
             ) {
                 for (uint j = 0; j < childrens[i].vaccinations.length; j++) {
+                    Vaccination storage vax = childrens[i].vaccinations[j];
                     if (
-                        keccak256(
-                            abi.encodePacked(
-                                childrens[i].vaccinations[j].vaccineName
-                            )
-                        ) == keccak256((abi.encodePacked(_vaccineName)))
+                        keccak256(abi.encodePacked(vax.vaccineName)) ==
+                        keccak256((abi.encodePacked(_vaccineName)))
                     ) {
                         // 자식이 이미 맞은 백신인 경우에 대해서 에러를 발생
                         require(
-                            childrens[i].vaccinations[j].status ==
-                                VaccinationStatus.Pending,
+                            vax.status == VaccinationStatus.Pending,
                             "already vaccination completed"
                         );
 
-                        // 자식의 개월 수가 권장 접종 나이 이상인지를 확인
+                        uint256 currentTime = block.timestamp;
                         require(
-                            childrens[i].babyMonth >=
-                                childrens[i].vaccinations[j].recommendedAge,
-                            "child not old enough for this vaccination"
+                            currentTime >= vax.startVaccinationDate &&
+                                currentTime <= vax.endVaccinationDate,
+                            "Not in vaccination Period"
                         );
 
                         // 백신 상태를 Pending -> Complete로 변경
-                        childrens[i].vaccinations[j].status = VaccinationStatus
-                            .Completed;
+                        vax.status = VaccinationStatus.Completed;
 
                         // 백신 접종 날짜를 업데이트
-                        childrens[i].vaccinations[j].administeredDate = block
-                            .timestamp;
+                        vax.administeredDate = currentTime;
 
                         // 백신 접종 이벤트에 대해서 이벤트 생성
                         emit VaccinationUpdated(
                             childrens[i].childAddress,
                             _vaccineName,
-                            block.timestamp
+                            currentTime
                         );
 
                         return;
