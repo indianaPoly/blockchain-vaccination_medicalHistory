@@ -4,9 +4,13 @@ pragma solidity ^0.8.0;
 import "../lib/DateUtils.sol";
 
 import "./HealthInformation.sol";
+import "./MedicalHistory.sol";
+import "./VaccinationManagement.sol";
 
 contract ParentChildRelationship {
     HealthInformation public healthInformationContract;
+    MedicalHistory public medicalHistoryContract;
+    VaccinationManagement public vaccinationManagementContract;
 
     struct Child {
         address childAddress; // 아이의 주소
@@ -29,9 +33,19 @@ contract ParentChildRelationship {
         address indexed childAddress
     );
 
-    constructor(address _healthInformationContractAddress) {
+    constructor(
+        address _healthInformationContractAddress,
+        address _medicalHistoryContractAddress,
+        address _vaccinationManagementContractAddress
+    ) {
         healthInformationContract = HealthInformation(
             _healthInformationContractAddress
+        );
+
+        medicalHistoryContract = MedicalHistory(_medicalHistoryContractAddress);
+
+        vaccinationManagementContract = VaccinationManagement(
+            _vaccinationManagementContractAddress
         );
     }
 
@@ -90,9 +104,10 @@ contract ParentChildRelationship {
 
     // 아이의 index를 찾아주는 함수
     function _findChildIndex(
+        address parentAddress,
         address _childAddress
     ) internal view returns (uint) {
-        Child[] storage children = parentToChild[childToParent[msg.sender][0]];
+        Child[] storage children = parentToChild[parentAddress];
         for (uint index = 0; index < children.length; index++) {
             if (children[index].childAddress == _childAddress) {
                 return index;
@@ -128,6 +143,8 @@ contract ParentChildRelationship {
             information
         );
 
+        // 백신 동기화가 이루어지는 코드가 작성이 되어야 함.
+
         emit CreateChild(msg.sender, childAddress);
     }
 
@@ -145,11 +162,15 @@ contract ParentChildRelationship {
             );
         }
 
-        Child storage connectchild = parentToChild[
-            childToParent[_childAddress][0]
-        ][_findChildIndex(_childAddress)];
+        address originalParent = childToParent[_childAddress][0];
+        uint childIndex = _findChildIndex(originalParent, _childAddress);
 
-        parentToChild[msg.sender].push(connectchild);
+        // 자녀 정보 가져와서 새로운 부모와 연결
+        Child storage connChild = parentToChild[originalParent][childIndex];
+        parentToChild[msg.sender].push(connChild);
+
+        // 자녀와 부모 간의 관계 업데이트
+        childToParent[_childAddress].push(msg.sender);
 
         emit ConnectChild(msg.sender, _childAddress);
     }
