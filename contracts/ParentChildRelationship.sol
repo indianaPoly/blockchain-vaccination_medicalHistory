@@ -8,6 +8,7 @@ import "./MedicalHistory.sol";
 import "./VaccinationManagement.sol";
 
 contract ParentChildRelationship {
+
     HealthInformation public healthInformationContract;
     MedicalHistory public medicalHistoryContract;
     VaccinationManagement public vaccinationManagementContract;
@@ -15,7 +16,7 @@ contract ParentChildRelationship {
     struct Child {
         address childAddress; // 아이의 주소
         string name; // 아이의 이름
-        uint256 birthDate; // 아이의 생일
+        uint256 birthDate; // 생년월일
         uint16 babyMonth; // 개월 수
     }
 
@@ -175,7 +176,7 @@ contract ParentChildRelationship {
         emit ConnectChild(msg.sender, _childAddress);
     }
 
-    // 아이의 건강 정보를 업데이트 하는 함수
+    // 아이의 건강 정보를 업데이트 하는 함수 (보안적인 측면이 들어가야 함.)
     function setHealthInformation(
         address _childAddress,
         uint16 _height,
@@ -189,7 +190,7 @@ contract ParentChildRelationship {
         );
     }
 
-    // 아이의 건강 정보를 리턴하는 함수
+    // 아이의 건강 정보를 리턴하는 함수 (보안적인 측면이 들어가야 함.)
     function getHealthInformation(
         address _childAddress
     ) public view returns (HealthInformation.Information memory) {
@@ -220,5 +221,34 @@ contract ParentChildRelationship {
         }
 
         revert("child with the give name not found");
+    }
+
+    // 진료 내역을 추가하는 함수
+    function addMedicalHistoryForChild(
+        address _childAddress,
+        MedicalHistory.MedicalType _medicalType, // MedicalHistory.sol에서 가져온 enum 사용
+        string memory _visitedName,
+        string memory _timestamp,
+        string memory _doctorName,
+        string memory _symptoms,
+        string memory _diagnosisDetails
+    ) public {
+
+        // MedicalHistory 컨트랙트의 addMedicalHistory 함수 호출
+        medicalHistoryContract.addMedicalHistory(
+            _childAddress,
+            _medicalType,
+            _visitedName,
+            _timestamp,
+            _doctorName,
+            _symptoms,
+            _diagnosisDetails
+        );
+    }
+
+    function getMedicalHistoriesForChild(
+        address _childAddress
+    ) public view returns (MedicalHistory.History[] memory) {
+        return medicalHistoryContract.getMedicalHistories(_childAddress);
     }
 }
