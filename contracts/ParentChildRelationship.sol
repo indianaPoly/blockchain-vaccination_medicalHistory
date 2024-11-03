@@ -8,7 +8,6 @@ import "./MedicalHistory.sol";
 import "./VaccinationManagement.sol";
 
 contract ParentChildRelationship {
-
     HealthInformation public healthInformationContract;
     MedicalHistory public medicalHistoryContract;
     VaccinationManagement public vaccinationManagementContract;
@@ -233,7 +232,6 @@ contract ParentChildRelationship {
         string memory _symptoms,
         string memory _diagnosisDetails
     ) public {
-
         // MedicalHistory 컨트랙트의 addMedicalHistory 함수 호출
         medicalHistoryContract.addMedicalHistory(
             _childAddress,
