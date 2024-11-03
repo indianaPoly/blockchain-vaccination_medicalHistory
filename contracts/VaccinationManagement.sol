@@ -131,6 +131,40 @@ contract VaccinationManagement {
         return vaxInfo;
     }
 
+    // 접종 기록을 업데이트 하는 함수
+    function updateMultipleChildVaccination(
+        address _childAddress,
+        string[] memory _vaccinNames
+    ) external {
+        require(_childAddress != address(0), "Invalid child address");
+        require(_vaccinNames.length > 0, "vaccine names required");
+
+        Vaccination[] storage vaxs = vaccinationRecords[_childAddress];
+        bool updated = false;
+
+        for (uint j = 0; j < _vaccinNames.length; j++) {
+            string memory vaccineName = _vaccinNames[j];
+
+            for (uint i = 0; i < vaxs.length; i++) {
+                Vaccination storage vax = vaxs[i];
+
+                if (
+                    keccak256(abi.encodePacked(vax.vaccineName)) ==
+                    keccak256(abi.encodePacked(vaccineName))
+                ) {
+                    if (vax.status == VaccinationStatus.Pending) {
+                        vax.status = VaccinationStatus.Completed;
+                        vax.administeredDate = block.timestamp; // 이거는 수정이 필요 할 듯
+
+                        updated = true;
+                    }
+                }
+            }
+        }
+
+        require(updated || _vaccinNames.length == 0, "No vaccinations updated");
+    }
+
     // 자녀의 예방 접종 기록 업데이트
     function updateChildVaccination(
         address _childAddress,
