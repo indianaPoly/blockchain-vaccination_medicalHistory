@@ -90,6 +90,15 @@ contract VaccinationManagement {
         );
     }
 
+    // mapping에 저장하도록 설정
+    function initializeVaccinationRecords(address _childAddress) external {
+        require(_childAddress != address(0), "Invalid address");
+
+        for (uint i = 0; i < recommendedVaccinations.length; i++) {
+            vaccinationRecords[_childAddress].push(recommendedVaccinations[i]);
+        }
+    }
+
     // 자녀의 예방 접종 상태 조회
     function returnChildVaccinationStatus(
         address _childAddress
