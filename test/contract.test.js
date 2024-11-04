@@ -1,57 +1,34 @@
 import hre from "hardhat";
 
-describe("Contract Test - Parent-Child Relationship", () => {
+describe("부모-자녀 관계 컨트랙트 테스트", () => {
   let ParentChildRelationship, parentChildRelationship;
   let HealthInformation, healthInformation;
   let MedicalHistory, medicalHistory;
   let VaccinationManagement, vaccinationManagement;
 
-  let owner, secondaryAddress;
+  let parent1, parent2;
+  let firstChildAddress, secondChildAddress;
 
   beforeEach(async () => {
-    console.log("컨트랙트 배포를 시작합니다...\n");
+    [parent1, parent2] = await hre.ethers.getSigners();
 
-    [owner, secondaryAddress] = await hre.ethers.getSigners();
-
-    // 자녀 건강정보 컨트랙트를 먼저 배포
-    console.log("자녀 건강정보 컨트랙트를 배포합니다...");
+    // 자녀 건강정보 컨트랙트 배포
     HealthInformation = await hre.ethers.getContractFactory(
       "HealthInformation"
     );
     healthInformation = await HealthInformation.deploy();
-    console.log("자녀 건강정보 컨트랙트가 성공적으로 배포되었습니다.");
-    console.log(
-      "자녀 건강정보 컨트랙트 주소:",
-      await healthInformation.getAddress(),
-      "\n"
-    );
 
     // 진료 내역 컨트랙트 배포
-    console.log("진료 내역 컨트랙트를 배포합니다...");
     MedicalHistory = await hre.ethers.getContractFactory("MedicalHistory");
     medicalHistory = await MedicalHistory.deploy();
-    console.log("진료 내역 컨트랙트가 정상적으로 배포되었습니다.");
-    console.log(
-      "진료 내역 컨트랙트 주소: ",
-      await medicalHistory.getAddress(),
-      "\n"
-    );
 
     // 예방 접종 관리 컨트랙트 배포
-    console.log("예방 접종 컨트랙트를 배포합니다...");
     VaccinationManagement = await hre.ethers.getContractFactory(
       "VaccinationManagement"
     );
     vaccinationManagement = await VaccinationManagement.deploy();
-    console.log("예뱡 접종 컨트랙트가 정상적으로 배포되었습니다.");
-    console.log(
-      "예뱡 접종 컨트랙트 주소: ",
-      await vaccinationManagement.getAddress(),
-      "\n"
-    );
 
-    // 부모-자녀 관계 컨트랙트를 배포
-    console.log("부모-자녀 관계 컨트랙트를 배포합니다...");
+    // 부모-자녀 관계 컨트랙트 배포
     ParentChildRelationship = await hre.ethers.getContractFactory(
       "ParentChildRelationship"
     );
@@ -60,139 +37,133 @@ describe("Contract Test - Parent-Child Relationship", () => {
       await medicalHistory.getAddress(),
       await vaccinationManagement.getAddress()
     );
-    console.log("부모-자녀 관계 컨트랙트가 성공적으로 배포되었습니다.");
-    console.log(
-      "부모-자녀 관계 컨트랙트 주소:",
-      await parentChildRelationship.getAddress(),
-      "\n"
-    );
   });
 
-  it("should add and link children", async () => {
-    // owner가 두 명의 자녀를 추가
+  it("메인 컨트랙트 테스트", async () => {
     await parentChildRelationship
-      .connect(owner)
-      .createChild("Go Hyunlim", 20231030, 10.1 * 10, 90.1 * 10);
+      .connect(parent1)
+      .createChild("고현림", 20231030, 10.1 * 10, 90.1 * 10);
     await parentChildRelationship
-      .connect(owner)
-      .createChild("Go Hwirim", 20241010, 10.1 * 10, 90.1 * 10);
-    console.log("자녀가 성공적으로 생성되었습니다.");
+      .connect(parent1)
+      .createChild("고희림", 20241010, 10.1 * 10, 90.1 * 10);
 
-    // 첫 번째 부모(owner)에게 보이는 자녀 목록을 출력
-    const ownerChildren =
+    const parent1Children =
       await parentChildRelationship.returnChildInformation();
-    console.log("첫 번째 부모(owner)가 확인할 수 있는 자녀 정보:");
-    console.log(ownerChildren);
+    console.log("부모 1이 확인할 수 있는 자녀 정보:", parent1Children);
 
-    // 첫 번째 자녀(Go Hyunlim)의 주소를 가져옴
-    const firstChildAddress = await parentChildRelationship
-      .connect(owner)
-      .returnChildAddress("Go Hyunlim");
+    firstChildAddress = await parentChildRelationship
+      .connect(parent1)
+      .returnChildAddress("고현림");
 
-    const secondChildAddress = await parentChildRelationship
-      .connect(owner)
-      .returnChildAddress("Go Hwirim");
-
-    // 두 번째 주소(secondaryAddress)가 첫 번째 자녀와 연동
     await parentChildRelationship
-      .connect(secondaryAddress)
+      .connect(parent2)
       .connectChild(firstChildAddress);
-    console.log("두 번째 주소와 자녀가 성공적으로 연동되었습니다.");
-
-    // 두 번째 주소가 확인할 수 있는 자녀 목록을 출력
-    const secondaryAddressChildren = await parentChildRelationship
-      .connect(secondaryAddress)
+    const parent2Children = await parentChildRelationship
+      .connect(parent2)
       .returnChildInformation();
-    console.log("두 번째 주소가 확인할 수 있는 자녀 정보:");
-    console.log(secondaryAddressChildren);
+    console.log("부모 2와 연동된 자녀 정보:", parent2Children);
+  });
 
-    // 부모 1로 부터 자녀의 건강정보에 대한 정보 가져오기
-    let child1_healthData_parent1 = await parentChildRelationship
-      .connect(owner)
-      .getHealthInformation(firstChildAddress);
-    const child2_healthData_parent1 = await parentChildRelationship
-      .connect(owner)
-      .getHealthInformation(secondChildAddress);
-
-    console.log("");
-    console.log("부모 1로부터 조회할 수 있는 아이의 건강정보");
-    console.log("자녀 1 : ", child1_healthData_parent1);
-    console.log("자녀 2 : ", child2_healthData_parent1, "\n");
-
-    let child1_healthData_parent2 = await parentChildRelationship
-      .connect(secondaryAddress)
-      .getHealthInformation(firstChildAddress);
-    console.log("부모 2로부터 확인할 수 있는 자녀의 정보");
-    console.log("자녀 1 : ", child1_healthData_parent2, "\n");
-
-    console.log("자녀의 정보를 변경 후 동일한 정보를 확인할 수 있는지 확인");
-    console.log("자녀1의 키와 몸무게를 변경 진행");
+  it("건강정보 컨트랙트 테스트", async () => {
     await parentChildRelationship
-      .connect(owner)
+      .connect(parent1)
+      .createChild("고현림", 20231030, 10.1 * 10, 90.1 * 10);
+    await parentChildRelationship
+      .connect(parent1)
+      .createChild("고희림", 20241010, 10.1 * 10, 90.1 * 10);
+
+    firstChildAddress = await parentChildRelationship
+      .connect(parent1)
+      .returnChildAddress("고현림");
+    secondChildAddress = await parentChildRelationship
+      .connect(parent1)
+      .returnChildAddress("고희림");
+
+    let childHealthData = await parentChildRelationship
+      .connect(parent1)
+      .getHealthInformation(firstChildAddress);
+    console.log("자녀 1의 초기 건강 정보:", childHealthData);
+
+    await parentChildRelationship
+      .connect(parent1)
       .setHealthInformation(firstChildAddress, 175.5 * 10, 80.7 * 10);
-    console.log("자녀1의 키와 몸무게 수정을 하였습니다.", "\n");
 
-    console.log("수정한 이후의 데이터를 부모1, 부모 2 둘 다 조회");
-    child1_healthData_parent1 = await parentChildRelationship
-      .connect(owner)
+    childHealthData = await parentChildRelationship
+      .connect(parent1)
       .getHealthInformation(firstChildAddress);
-    child1_healthData_parent2 = await parentChildRelationship
-      .connect(secondaryAddress)
-      .getHealthInformation(firstChildAddress);
-    console.log("부모 1로 부터 수정된 자녀의 정보를 확인");
-    console.log("자녀 1 : ", child1_healthData_parent1, "\n");
-    console.log("부모 2로 부터 수정된 자녀의 정보를 확인");
-    console.log("자녀 1 : ", child1_healthData_parent2, "\n");
+    console.log("수정 후 자녀 1의 건강 정보 (부모 1로부터):", childHealthData);
 
-    console.log("진료 내역을 추가하는 테스트 입니다.");
+    childHealthData = await parentChildRelationship
+      .connect(parent2)
+      .getHealthInformation(firstChildAddress);
+    console.log("수정 후 자녀 1의 건강 정보 (부모 2로부터):", childHealthData);
+  });
+
+  it("진료 내역 컨트랙트 테스트", async () => {
     await parentChildRelationship
-      .connect(owner)
+      .connect(parent1)
+      .createChild("고현림", 20231030, 10.1 * 10, 90.1 * 10);
+    firstChildAddress = await parentChildRelationship
+      .connect(parent1)
+      .returnChildAddress("고현림");
+
+    await parentChildRelationship
+      .connect(parent1)
       .addMedicalHistoryForChild(
         firstChildAddress,
         0,
         "세브란스 병원",
         "2024.10.10",
-        "갑을병",
         "감기",
+        "환절기 감기",
         "환절기에 따른 감기"
       );
-    console.log("부모 1이 자녀 1의 진료 내역을 추가하였습니다.\n");
 
-    console.log("부모 1이 자녀 1에 대한 진료 내역 조회");
-    let child1_medicalHistory_parent1 = await parentChildRelationship
-      .connect(owner)
+    let childMedicalHistory = await parentChildRelationship
+      .connect(parent1)
       .getMedicalHistoriesForChild(firstChildAddress);
-    console.log(child1_medicalHistory_parent1, "\n");
-
-    console.log("부모 2가 자녀 1에 대한 진료 내역 조회");
-    let child1_medicalHistory_parent2 = await parentChildRelationship
-      .connect(secondaryAddress)
-      .getMedicalHistoriesForChild(firstChildAddress);
-    console.log(child1_medicalHistory_parent2);
+    console.log("자녀 1의 진료 내역 (부모 1로부터):", childMedicalHistory);
 
     await parentChildRelationship
-      .connect(secondaryAddress)
+      .connect(parent2)
       .addMedicalHistoryForChild(
         firstChildAddress,
         0,
         "차병원",
         "2024.11.10",
-        "숭실",
         "독감",
+        "인플루엔자",
         "독감 유행"
       );
-    console.log("부모 2가 자녀 1의 진료 내역을 추가하였습니다.\n");
 
-    console.log("부모 1이 자녀 1에 대한 진료 내역 조회");
-    child1_medicalHistory_parent1 = await parentChildRelationship
-      .connect(owner)
+    childMedicalHistory = await parentChildRelationship
+      .connect(parent2)
       .getMedicalHistoriesForChild(firstChildAddress);
-    console.log(child1_medicalHistory_parent1, "\n");
+    console.log("자녀 1의 진료 내역 (부모 2로부터):", childMedicalHistory);
+  });
 
-    console.log("부모 2가 자녀 1에 대한 진료 내역 조회");
-    child1_medicalHistory_parent2 = await parentChildRelationship
-      .connect(secondaryAddress)
-      .getMedicalHistoriesForChild(firstChildAddress);
-    console.log(child1_medicalHistory_parent2);
+  it("예방 접종 컨트랙트 테스트", async () => {
+    // 초기 예방 접종 mapping 상태 저장
+    await vaccinationManagement
+      .connect(parent1)
+      .initializeVaccinationRecords(firstChildAddress);
+    console.log("자녀1에 대한 초기 백신 상테를 형성하였습니다.\n");
+
+    let firstChildVax = await vaccinationManagement
+      .connect(parent1)
+      .returnChildVaccinationStatus(firstChildAddress);
+    console.log("자녀1에 대한 백신 접종 상태");
+    console.log(firstChildVax);
+
+    await vaccinationManagement
+      .connect(parent1)
+      .updateChildVaccination(firstChildAddress, "BCG");
+
+    console.log("자녀가 백신을 맞았습니다.");
+    console.log("백신을 맞고난 이후에 정보");
+    firstChildVax = await vaccinationManagement
+      .connect(parent1)
+      .returnChildVaccinationStatus(firstChildAddress);
+    console.log(firstChildVax);
   });
 });
