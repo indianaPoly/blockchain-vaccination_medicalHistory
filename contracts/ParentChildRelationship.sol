@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../lib/DateUtils.sol";
-
 import "./HealthInformation.sol";
 import "./MedicalHistory.sol";
 import "./VaccinationManagement.sol";
@@ -212,5 +210,45 @@ contract ParentChildRelationship {
         address _childAddress
     ) public view returns (MedicalHistory.History[] memory) {
         return medicalHistoryContract.getMedicalHistories(_childAddress);
+    }
+
+    function returnChildVaccinationStatus(
+        address _childAddress
+    ) public view returns (VaccinationManagement.VaccinationInfomation memory) {
+        return
+            vaccinationManagementContract.returnChildVaccinationStatus(
+                _childAddress
+            );
+    }
+
+    function updateChildVaccination(
+        address _childAddress,
+        string memory _vaccineName
+    ) external {
+        vaccinationManagementContract.updateChildVaccination(
+            _childAddress,
+            _vaccineName
+        );
+    }
+
+    function updateMultipleChildVaccination(
+        address _childAddress,
+        string[] memory _vaccinNames
+    ) external {
+        vaccinationManagementContract.updateMultipleChildVaccination(
+            _childAddress,
+            _vaccinNames
+        );
+    }
+
+    function getVaccinationDDay(
+        address _childAddress,
+        uint256 _childBirthDate
+    ) public view returns (VaccinationManagement.VaccinationWithDDay[] memory) {
+        return
+            vaccinationManagementContract.getVaccinationDDay(
+                _childAddress,
+                _childBirthDate
+            );
     }
 }
