@@ -14,8 +14,8 @@ contract VaccinationManagement {
         string vaccineName; // 백신이름
         string targetDisease; // 백신이 예방하는 대상 질병
         uint8 vaccineChapter; // 백신 차수
-        uint8 recommendedAge; // 권장접종나이 (개월로 반푤)
-        uint8 recommendedEndAge; // 접종이 가능한 나이의 최대 범위 (개월 단위)
+        uint16 recommendedDays; // 권장접종 일수 (출생 후 경과일로 표시)
+        uint16 recommendedEndDays; // 접종이 가능한 일수의 최대 범위 (출생 후 경과일)
         uint256 startVaccinationDate; // 접종이 가능한 시작일
         uint256 endVaccinationDate; // 접종이 가능한 종료일
         VaccinationStatus status; // 접종상태 (대기 중, 완료)
@@ -26,6 +26,12 @@ contract VaccinationManagement {
     struct VaccinationInfomation {
         Vaccination[] completed;
         Vaccination[] pending;
+    }
+
+    // D-day 정보를 가지고 있는 구조체
+    struct VaccinationWithDDay {
+        Vaccination vax;
+        int256 dDay;
     }
 
     // 권장 예방접종 목록 저장 배열
@@ -43,26 +49,61 @@ contract VaccinationManagement {
 
     // 생성자
     constructor() {
-        _addVaccination(1, "BCG", unicode"결핵", 1, 0, 1);
-        _addVaccination(2, "HepB", unicode"B형간염", 1, 0, 1);
-        _addVaccination(3, "HepB", unicode"B형간염", 2, 1, 2);
-        _addVaccination(4, "DTap", unicode"디프테리아 파상풍 백일해", 1, 2, 3);
-        _addVaccination(5, "IPV", unicode"폴리오", 1, 2, 3);
-        _addVaccination(6, "Hib", unicode"b형헤모필루스인플루엔자", 1, 2, 3);
-        _addVaccination(7, "PCV", unicode"폐렴구균", 1, 2, 3);
-        _addVaccination(8, "RV1", unicode"로타바이러스 감염증", 1, 2, 3);
-        _addVaccination(9, "RV5", unicode"로타바이러스 감염증", 1, 2, 3);
-        _addVaccination(10, "DTap", unicode"디프테리아 파상풍 백일해", 2, 4, 5);
-        _addVaccination(11, "IPV", unicode"폴리오", 2, 4, 5);
-        _addVaccination(12, "Hib", unicode"b형헤모필루스인플루엔자", 2, 4, 5);
-        _addVaccination(13, "PCV", unicode"폐렴구균", 2, 4, 5);
-        _addVaccination(14, "RV1", unicode"로타바이러스 감염증", 2, 4, 5);
-        _addVaccination(18, "RV5", unicode"로타바이러스 감염증", 2, 4, 5);
-        _addVaccination(19, "HepB", unicode"B형간염", 3, 6, 7);
-        _addVaccination(20, "DTap", unicode"디프테리아 파상풍 백일해", 3, 6, 7);
-        _addVaccination(22, "Hib", unicode"b형헤모필루스인플루엔자", 3, 6, 7);
-        _addVaccination(23, "PCV", unicode"폐렴구균", 2, 6, 7);
-        _addVaccination(24, "RV5", unicode"로타바이러스 감염증", 3, 6, 7);
+        _addVaccination(1, "BCG", unicode"결핵", 1, 0, 30);
+        _addVaccination(2, "HepB", unicode"B형간염", 1, 0, 30);
+        _addVaccination(3, "HepB", unicode"B형간염", 2, 30, 60);
+        _addVaccination(
+            4,
+            "DTap",
+            unicode"디프테리아 파상풍 백일해",
+            1,
+            60,
+            90
+        );
+        _addVaccination(5, "IPV", unicode"폴리오", 1, 60, 90);
+        _addVaccination(6, "Hib", unicode"b형헤모필루스인플루엔자", 1, 60, 90);
+        _addVaccination(7, "PCV", unicode"폐렴구균", 1, 60, 90);
+        _addVaccination(8, "RV1", unicode"로타바이러스 감염증", 1, 60, 90);
+        _addVaccination(9, "RV5", unicode"로타바이러스 감염증", 1, 60, 90);
+        _addVaccination(
+            10,
+            "DTap",
+            unicode"디프테리아 파상풍 백일해",
+            2,
+            120,
+            150
+        );
+        _addVaccination(11, "IPV", unicode"폴리오", 2, 120, 150);
+        _addVaccination(
+            12,
+            "Hib",
+            unicode"b형헤모필루스인플루엔자",
+            2,
+            120,
+            150
+        );
+        _addVaccination(13, "PCV", unicode"폐렴구균", 2, 120, 150);
+        _addVaccination(14, "RV1", unicode"로타바이러스 감염증", 2, 120, 150);
+        _addVaccination(18, "RV5", unicode"로타바이러스 감염증", 2, 120, 150);
+        _addVaccination(19, "HepB", unicode"B형간염", 3, 180, 210);
+        _addVaccination(
+            20,
+            "DTap",
+            unicode"디프테리아 파상풍 백일해",
+            3,
+            180,
+            210
+        );
+        _addVaccination(
+            22,
+            "Hib",
+            unicode"b형헤모필루스인플루엔자",
+            3,
+            180,
+            210
+        );
+        _addVaccination(23, "PCV", unicode"폐렴구균", 2, 180, 210);
+        _addVaccination(24, "RV5", unicode"로타바이러스 감염증", 3, 180, 210);
     }
 
     // 권장 예방 접종 목록에 백신 추가
@@ -71,8 +112,8 @@ contract VaccinationManagement {
         string memory _vaccineName,
         string memory _targetDisease,
         uint8 _chapter,
-        uint8 _recommendedAge,
-        uint8 _recommendedEndAge
+        uint16 _recommendedDays,
+        uint16 _recommendedEndDays
     ) internal {
         recommendedVaccinations.push(
             Vaccination({
@@ -80,8 +121,8 @@ contract VaccinationManagement {
                 vaccineName: _vaccineName,
                 targetDisease: _targetDisease,
                 vaccineChapter: _chapter,
-                recommendedAge: _recommendedAge,
-                recommendedEndAge: _recommendedEndAge,
+                recommendedDays: _recommendedDays,
+                recommendedEndDays: _recommendedEndDays,
                 startVaccinationDate: 0,
                 endVaccinationDate: 0,
                 status: VaccinationStatus.Pending,
@@ -206,5 +247,56 @@ contract VaccinationManagement {
         }
 
         revert("Vaccine not found for the child");
+    }
+
+    // d-day return 하는 함수
+    function getVaccinationDDay(
+        address _childAddress,
+        uint256 _childBirthDate
+    ) public view returns (VaccinationWithDDay[] memory) {
+        require(_childAddress != address(0), "Invalid child address");
+
+        Vaccination[] storage vaxs = vaccinationRecords[_childAddress];
+        uint pendingCount = 0;
+
+        // Pending 상태 백신 개수 확인
+        for (uint i = 0; i < vaxs.length; i++) {
+            if (vaxs[i].status == VaccinationStatus.Pending) {
+                pendingCount++;
+            }
+        }
+
+        // 반환할 배열 초기화
+        VaccinationWithDDay[]
+            memory pendingVaccinesWithDDay = new VaccinationWithDDay[](
+                pendingCount
+            );
+
+        uint index = 0;
+        for (uint i = 0; i < vaxs.length; i++) {
+            if (vaxs[i].status == VaccinationStatus.Pending) {
+                uint256 recommendedStart = _childBirthDate +
+                    (vaxs[i].recommendedDays * 1 days);
+                int256 dDay;
+
+                // D-day 계산
+                if (recommendedStart > block.timestamp) {
+                    dDay = int256(
+                        (recommendedStart - block.timestamp) / 1 days
+                    );
+                } else {
+                    dDay = 0; // 현재 접종 가능 기간이 시작됨
+                }
+
+                // 구조체에 D-day와 백신 정보 추가
+                pendingVaccinesWithDDay[index] = VaccinationWithDDay({
+                    vax: vaxs[i],
+                    dDay: dDay
+                });
+                index++;
+            }
+        }
+
+        return pendingVaccinesWithDDay;
     }
 }

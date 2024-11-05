@@ -16,7 +16,6 @@ contract ParentChildRelationship {
         address childAddress; // 아이의 주소
         string name; // 아이의 이름
         uint256 birthDate; // 생년월일
-        uint16 babyMonth; // 개월 수
     }
 
     // 부모의 주소가 자식들을 가리킴
@@ -49,59 +48,6 @@ contract ParentChildRelationship {
         );
     }
 
-    // 아이의 주소를 생성하는 함수 (이름과, 생년월일을 받음)
-    function _generateChildAddress(
-        string memory _name,
-        uint256 _birthDate
-    ) private view returns (address) {
-        return
-            address(
-                uint160(
-                    uint256(
-                        keccak256(
-                            abi.encodePacked(msg.sender, _name, _birthDate)
-                        )
-                    )
-                )
-            );
-    }
-
-    // 아이의 개월수를 계산하는 함수
-    function _caculateBabyMonth(
-        uint256 birthDate
-    ) internal view returns (uint16) {
-        require(
-            birthDate <= block.timestamp,
-            "Birth date must be in the past."
-        ); // Check if birth date is valid
-
-        // Convert current time to YYYYMMDD
-        uint256 today = DateUtils.unixToYYYYMMDD(block.timestamp);
-
-        // Extract year, month, and day from birthDate and today
-        uint256 yearToday = today / 10000;
-        uint256 monthToday = (today / 100) % 100;
-        uint256 dayToday = today % 100;
-
-        uint256 yearBirth = birthDate / 10000;
-        uint256 monthBirth = (birthDate / 100) % 100;
-        uint256 dayBirth = birthDate % 100;
-
-        // Calculate differences
-        require(yearToday >= yearBirth, "Year difference invalid."); // Ensures today is later than birth year
-
-        uint16 totalMonths = uint16(
-            (yearToday - yearBirth) * 12 + (monthToday - monthBirth)
-        );
-
-        // Adjust for day of month
-        if (dayToday < dayBirth) {
-            totalMonths -= 1; // Not a full month
-        }
-
-        return totalMonths; // Ensure this is within uint8 range (0-255)
-    }
-
     // 아이의 index를 찾아주는 함수
     function _findChildIndex(
         address parentAddress,
@@ -121,17 +67,23 @@ contract ParentChildRelationship {
         string memory _name,
         uint256 _birthDate,
         uint16 _height,
-        uint16 _weight
-    ) public {
+        uint16 _weight,
+        string[] memory vaxs
+    ) public returns (address) {
         require(msg.sender != address(0), "parent not found");
-        address childAddress = _generateChildAddress(_name, _birthDate);
+        address childAddress = address(
+            uint160(
+                uint256(
+                    keccak256(abi.encodePacked(msg.sender, _name, _birthDate))
+                )
+            )
+        );
 
         // 부모와 자식을 연결함.
         Child storage newChild = parentToChild[msg.sender].push();
         newChild.childAddress = childAddress;
         newChild.name = _name;
         newChild.birthDate = _birthDate;
-        newChild.babyMonth = _caculateBabyMonth(_birthDate);
 
         childToParent[childAddress].push(msg.sender);
 
@@ -143,9 +95,21 @@ contract ParentChildRelationship {
             information
         );
 
-        // 백신 동기화가 이루어지는 코드가 작성이 되어야 함.
+        // 초기 백신 상태를 만들어둠.
+        vaccinationManagementContract.initializeVaccinationRecords(
+            childAddress
+        );
+
+        // 백신 상태 동기화 진행
+        vaccinationManagementContract.updateMultipleChildVaccination(
+            childAddress,
+            vaxs
+        );
 
         emit CreateChild(msg.sender, childAddress);
+
+        // 아이를 정상적으로 생성하고 나면 주소를 리턴
+        return childAddress;
     }
 
     // 아이와 부모를 연동하는 함수
