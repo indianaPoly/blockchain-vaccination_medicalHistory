@@ -95,7 +95,7 @@ contract ParentChildRelationshipWithMeta {
             );
     }
 
-    // 메타트랜잭션: CreateChild
+    // - MARK: TX Func
     function executeMetaCreateChild(
         address parent,
         string memory name,
@@ -392,6 +392,7 @@ contract ParentChildRelationshipWithMeta {
         );
     }
 
+    // - MARK: 내부 함수
     // 읽기 전용 함수들은 메타트랜잭션이 필요 없음
     function _findChildIndex(
         address parentAddress,
@@ -406,12 +407,7 @@ contract ParentChildRelationshipWithMeta {
         revert("Child not found");
     }
 
-    function getHealthInformation(
-        address _childAddress
-    ) public view returns (HealthInformation.Information memory) {
-        return healthInformationContract.getHealthInformation(_childAddress);
-    }
-
+    // - MARK: 정보 리턴
     function returnChildInformation() public view returns (Child[] memory) {
         return parentToChild[msg.sender];
     }
@@ -436,7 +432,13 @@ contract ParentChildRelationshipWithMeta {
         revert("child with the given name not found");
     }
 
-    function getMedicalHistoriesForChild(
+    function returnHealthInformation(
+        address _childAddress
+    ) public view returns (HealthInformation.Information memory) {
+        return healthInformationContract.getHealthInformation(_childAddress);
+    }
+
+    function returnMedicalHistoriesForChild(
         address _childAddress
     ) public view returns (MedicalHistory.History[] memory) {
         return medicalHistoryContract.getMedicalHistories(_childAddress);
@@ -451,15 +453,26 @@ contract ParentChildRelationshipWithMeta {
             );
     }
 
-    function getVaccinationDDay(
-        address _childAddress,
-        uint256 _childBirthDate
+    function returnVaccinationDDay(
+        address _parentAddress,
+        address _childAddress
     ) public view returns (VaccinationManagement.VaccinationWithDDay[] memory) {
-        return
-            vaccinationManagementContract.getVaccinationDDay(
-                _childAddress,
-                _childBirthDate
-            );
+        Child[] memory child = parentToChild[_parentAddress];
+
+        for (uint i = 0; i < child.length; i++) {
+            if (
+                keccak256(abi.encodePacked(child[i].childAddress)) ==
+                keccak256((abi.encodePacked(_childAddress)))
+            ) {
+                return
+                    vaccinationManagementContract.getVaccinationDDay(
+                        _childAddress,
+                        child[i].birthDate
+                    );
+            }
+        }
+
+        revert("child not found");
     }
 
     // 논스 조회
