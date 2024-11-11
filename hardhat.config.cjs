@@ -2,7 +2,12 @@ require("@nomicfoundation/hardhat-toolbox");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.27",
+  solidity: {
+    version: "0.8.27",
+    settings: {
+      viaIR: true,
+    },
+  },
   paths: {
     sources: "./contracts",
     tests: "./test",
@@ -17,9 +22,9 @@ module.exports = {
         accountsBalance: "10000000000000000000000", // 각 계정의 초기 잔액 (wei 단위)
       },
     },
-    sepolia: {
-      url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: [`0x${process.env.PRIVATE_KEY}`],
-    },
+    // sepolia: {
+    //   url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    //   accounts: [`0x${process.env.PRIVATE_KEY}`],
+    // },
   },
 };
