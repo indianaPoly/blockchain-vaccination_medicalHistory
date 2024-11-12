@@ -59,12 +59,18 @@ contract ParentChildRelationshipWithMeta {
 
     bytes32 private constant UPDATE_VACCINATION_TYPEHASH =
         keccak256(
-            "UpdateVaccination(address parent,address childAddress,string vaccineName,uint256 nonce)"
+            "UpdateVaccination(address parent,address childAddress,string vaccineName,uint8 vaccineChapter,uint256 administeredDate,uint256 nonce)"
         );
 
+    bytes32 private constant VACCINATION_INPUT_TYPEHASH =
+        keccak256(
+            "VaccinationInput(string vaccineName,uint8 vaccineChapter,uint256 administerDate)"
+        );
+
+    // UPDATE_MULTIPLE_VACCINATION_TYPEHASH 수정
     bytes32 private constant UPDATE_MULTIPLE_VACCINATION_TYPEHASH =
         keccak256(
-            "UpdateMultipleVaccination(address parent,address childAddress,string[] vaccineNames,uint256 nonce)"
+            "UpdateMultipleVaccination(address parent,address childAddress,VaccinationInput[] vaccinations,uint256 nonce)VaccinationInput(string vaccineName,uint8 vaccineChapter,uint256 administerDate)"
         );
 
     constructor(
@@ -102,7 +108,6 @@ contract ParentChildRelationshipWithMeta {
         uint256 birthDate,
         uint16 height,
         uint16 weight,
-        // string[] memory vaxs,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -124,7 +129,6 @@ contract ParentChildRelationshipWithMeta {
                         birthDate,
                         height,
                         weight,
-                        // keccak256(abi.encode(vaxs)),
                         nonces[parent]++
                     )
                 )
@@ -154,13 +158,9 @@ contract ParentChildRelationshipWithMeta {
             information
         );
 
-        // vaccinationManagementContract.initializeVaccinationRecords(
-        //     childAddress
-        // );
-        // vaccinationManagementContract.updateMultipleChildVaccination(
-        //     childAddress,
-        //     vaxs
-        // );
+        vaccinationManagementContract.initializeVaccinationRecords(
+            childAddress
+        );
 
         emit CreateChild(parent, childAddress);
     }
@@ -319,6 +319,8 @@ contract ParentChildRelationshipWithMeta {
         address parent,
         address childAddress,
         string memory vaccineName,
+        uint8 vaccineChapter,
+        uint256 administeredDate,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -338,6 +340,8 @@ contract ParentChildRelationshipWithMeta {
                         parent,
                         childAddress,
                         keccak256(bytes(vaccineName)),
+                        vaccineChapter,
+                        administeredDate,
                         nonces[parent]++
                     )
                 )
@@ -349,15 +353,16 @@ contract ParentChildRelationshipWithMeta {
 
         vaccinationManagementContract.updateChildVaccination(
             childAddress,
-            vaccineName
+            vaccineName,
+            vaccineChapter,
+            administeredDate
         );
     }
 
-    // 메타트랜잭션: UpdateMultipleVaccination
     function executeMetaUpdateMultipleVaccination(
         address parent,
         address childAddress,
-        string[] memory vaccineNames,
+        VaccinationManagement.VaccinationInput[] memory vaccinations,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -366,6 +371,24 @@ contract ParentChildRelationshipWithMeta {
             msg.sender == owner,
             "Only owner can execute meta transactions"
         );
+        require(vaccinations.length > 0, "No vaccinations provided");
+
+        // VaccinationInput[] 배열을 위한 타입해시 배열 생성
+        bytes32[] memory vaccinationStructHashes = new bytes32[](
+            vaccinations.length
+        );
+
+        for (uint i = 0; i < vaccinations.length; i++) {
+            // 각 VaccinationInput 구조체의 해시 생성
+            vaccinationStructHashes[i] = keccak256(
+                abi.encode(
+                    VACCINATION_INPUT_TYPEHASH,
+                    keccak256(bytes(vaccinations[i].vaccineName)),
+                    vaccinations[i].vaccineChapter,
+                    vaccinations[i].administerDate
+                )
+            );
+        }
 
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -376,7 +399,7 @@ contract ParentChildRelationshipWithMeta {
                         UPDATE_MULTIPLE_VACCINATION_TYPEHASH,
                         parent,
                         childAddress,
-                        keccak256(abi.encode(vaccineNames)),
+                        keccak256(abi.encodePacked(vaccinationStructHashes)),
                         nonces[parent]++
                     )
                 )
@@ -388,7 +411,7 @@ contract ParentChildRelationshipWithMeta {
 
         vaccinationManagementContract.updateMultipleChildVaccination(
             childAddress,
-            vaccineNames
+            vaccinations
         );
     }
 
@@ -451,28 +474,6 @@ contract ParentChildRelationshipWithMeta {
             vaccinationManagementContract.returnChildVaccinationStatus(
                 _childAddress
             );
-    }
-
-    function returnVaccinationDDay(
-        address _parentAddress,
-        address _childAddress
-    ) public view returns (VaccinationManagement.VaccinationWithDDay[] memory) {
-        Child[] memory child = parentToChild[_parentAddress];
-
-        for (uint i = 0; i < child.length; i++) {
-            if (
-                keccak256(abi.encodePacked(child[i].childAddress)) ==
-                keccak256((abi.encodePacked(_childAddress)))
-            ) {
-                return
-                    vaccinationManagementContract.getVaccinationDDay(
-                        _childAddress,
-                        child[i].birthDate
-                    );
-            }
-        }
-
-        revert("child not found");
     }
 
     // 논스 조회
