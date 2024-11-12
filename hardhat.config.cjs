@@ -1,5 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
+const dotenv = require("dotenv");
 
+dotenv.config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -22,9 +24,9 @@ module.exports = {
         accountsBalance: "10000000000000000000000", // 각 계정의 초기 잔액 (wei 단위)
       },
     },
-    // sepolia: {
-    //   url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
-    //   accounts: [`0x${process.env.PRIVATE_KEY}`],
-    // },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+    },
   },
 };

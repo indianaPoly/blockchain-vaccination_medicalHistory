@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
@@ -19,6 +22,9 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.1.0",
-    "crypto-js": "^4.2.0"
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
   }
 }
