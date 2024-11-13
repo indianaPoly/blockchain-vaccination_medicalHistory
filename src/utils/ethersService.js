@@ -10,13 +10,13 @@ export class ethersService {
     this.contracts = {
       parentChildRelationship: new hre.ethers.Contract(
         config.contracts.parentChildRelationship,
-        ParentChildRelationshipABI,
+        ParentChildRelationshipABI.abi,
         this.wallet
       ),
     };
   }
 
-  getContract = async (name) => {
+  getContract = (name) => {
     return this.contracts[name];
   };
 }

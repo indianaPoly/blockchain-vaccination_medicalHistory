@@ -15,12 +15,14 @@ export class ChildController {
   createChild = async (req, res) => {
     try {
       const { parent, childName, birthDate, height, weight } = req.body;
-      const contract = await ethersService.getContract(
+      const ethersServiceInstance = new ethersService();
+      const contract = await ethersServiceInstance.getContract(
         "parentChildRelationship"
       );
 
       const nonce = await contract.getNonce(parent);
-      const chainId = (await ethersService.provider.getNetwork()).chainId;
+      const chainId = (await ethersServiceInstance.provider.getNetwork())
+        .chainId;
 
       const domain = {
         name: "ParentChildRelationshipWithMeta",
@@ -44,14 +46,18 @@ export class ChildController {
         parent,
         name: childName,
         birthDate: toUnixTimestamp(birthDate),
-        height: height * 10,
-        weight: weight * 10,
+        height,
+        weight,
         nonce,
       };
 
-      const wallet = new hre.ethers.Wallet(ethersService.wallet.privateKey);
+      const wallet = new hre.ethers.Wallet(
+        ethersServiceInstance.wallet.privateKey
+      );
       const signature = await wallet.signTypedData(domain, types, value);
       const { v, r, s } = hre.ethers.Signature.from(signature);
+
+      console.log(v, r, s);
 
       const tx = await contract.executeMetaCreateChild(
         parent,
