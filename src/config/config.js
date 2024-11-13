@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const config = {
   port: 3000,
-  rpcURL: "http://127.0.0.1:8545",
+  rpcURL: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
   privateKey: process.env.PRIVATE_KEY,
   contracts: {
     parentChildRelationship: process.env.PARENT_CHILD_RELATIONSHIP_ADDRESS,
