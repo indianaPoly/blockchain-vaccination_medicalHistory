@@ -9,7 +9,7 @@ dotenv.config({
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const config = {
-  port: 3000,
+  port: 8000,
   rpcURL: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
   privateKey: process.env.PRIVATE_KEY,
   contracts: {
