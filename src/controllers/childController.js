@@ -138,51 +138,15 @@ export class ChildController {
         doctorName,
         symptoms,
         diagnosisDetails,
+        signature,
       } = req.body;
 
-      const contract = await ethersService.getContract(
+      const ethersServiceInstance = new ethersService();
+      const contract = await ethersServiceInstance.getContract(
         "parentChildRelationship"
       );
 
-      const nonce = await contract.getNonce(parent);
-      const chainId = (await ethersService.provider.getNetwork()).chainId;
-
-      const domain = {
-        name: "ParentChildRelationshipWithMeta",
-        version: "1",
-        chainId,
-        verifyingContract: contract.target,
-      };
-
-      const types = {
-        AddMedicalHistory: [
-          { name: "parent", type: "address" },
-          { name: "childAddress", type: "address" },
-          { name: "medicalType", type: "uint8" },
-          { name: "visitedName", type: "string" },
-          { name: "timestamp", type: "string" },
-          { name: "doctorName", type: "string" },
-          { name: "symptoms", type: "string" },
-          { name: "diagnosisDetails", type: "string" },
-          { name: "nonce", type: "uint256" },
-        ],
-      };
-
-      const value = {
-        parent,
-        childAddress,
-        medicalType,
-        visitedName,
-        timestamp,
-        doctorName,
-        symptoms,
-        diagnosisDetails,
-        nonce,
-      };
-
-      const wallet = new ethers.Wallet(ethersService.wallet.privateKey);
-      const signature = await wallet.signTypedData(domain, types, value);
-      const { v, r, s } = ethers.Signature.from(signature);
+      const { v, r, s } = hre.ethers.Signature.from(signature);
 
       const tx = await contract.executeMetaAddMedicalHistory(
         parent,
@@ -223,44 +187,15 @@ export class ChildController {
         vaccineName,
         vaccineChapter,
         administeredDate,
+        signature,
       } = req.body;
-      const contract = await ethersService.getContract(
+
+      const ethersServiceInstance = new ethersService();
+      const contract = await ethersServiceInstance.getContract(
         "parentChildRelationship"
       );
 
-      const nonce = await contract.getNonce(parent);
-      const chainId = (await ethersService.provider.getNetwork()).chainId;
-
-      const domain = {
-        name: "ParentChildRelationshipWithMeta",
-        version: "1",
-        chainId,
-        verifyingContract: contract.target,
-      };
-
-      const types = {
-        UpdateVaccination: [
-          { name: "parent", type: "address" },
-          { name: "childAddress", type: "address" },
-          { name: "vaccineName", type: "string" },
-          { name: "vaccineChapter", type: "uint8" },
-          { name: "administeredDate", type: "uint256" },
-          { name: "nonce", type: "uint256" },
-        ],
-      };
-
-      const value = {
-        parent,
-        childAddress,
-        vaccineName,
-        vaccineChapter,
-        administeredDate,
-        nonce,
-      };
-
-      const wallet = new ethers.Wallet(ethersService.wallet.privateKey);
-      const signature = await wallet.signTypedData(domain, types, value);
-      const { v, r, s } = ethers.Signature.from(signature);
+      const { v, r, s } = hre.ethers.Signature.from(signature);
 
       const tx = await contract.executeMetaUpdateVaccination(
         parent,
@@ -305,11 +240,13 @@ export class ChildController {
   updateMultipleVaccinations = async (req, res) => {
     try {
       const { parent, childAddress, vaccinations, signature } = req.body;
-      const contract = await ethersService.getContract(
+
+      const ethersServiceInstance = new ethersService();
+      const contract = await ethersServiceInstance.getContract(
         "parentChildRelationship"
       );
 
-      const { v, r, s } = ethers.Signature.from(signature);
+      const { v, r, s } = hre.ethers.Signature.from(signature);
 
       const tx = await contract.executeMetaUpdateMultipleVaccination(
         parent,
