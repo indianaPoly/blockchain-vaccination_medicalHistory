@@ -246,6 +246,7 @@ contract VaccinationManagement {
                     vaxs[j].status == VaccinationStatus.Pending
                 ) {
                     vaxs[j].status = VaccinationStatus.Completed;
+                    vaxs[j].administeredDate = input.administerDate;
 
                     emit VaccinationUpdated(
                         _childAddress,

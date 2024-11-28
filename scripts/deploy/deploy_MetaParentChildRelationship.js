@@ -3,13 +3,11 @@ import hre from "hardhat";
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
-  const healthContractAddress = "0x1294bF208e2CE8F7C92F362a83f4D28E47e55CF9";
+  const healthContractAddress = "0xaA64C4124d214b6603a3aB326c9B25769d8daC9C";
   const medicalHistoryContractAddress =
-    "0x91f2402EA971c7a95cC294F052d37d543eaF1944";
+    "0xD365bF78AB98D50e2180Ea6435Bb30679E9C4c8F";
   const vaccinationContractAddress =
-    "0x1317dcAdcfe99410c43a2D1980554cBf5f3FDf28";
-  const parentChildRelationshipContractAddress =
-    "0x61f019Da7b14683f2Af4454a080736d47Eb0Cb33";
+    "0x728bfD90B7daB6E17E82Bbc54B28342045Cc05cA";
 
   console.log("Deploying account:", deployer.address);
   console.log(
