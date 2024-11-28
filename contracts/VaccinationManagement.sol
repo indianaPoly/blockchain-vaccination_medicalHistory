@@ -246,7 +246,6 @@ contract VaccinationManagement {
                     vaxs[j].status == VaccinationStatus.Pending
                 ) {
                     vaxs[j].status = VaccinationStatus.Completed;
-                    vaxs[j].administeredDate = 0; // 이거는 수정이 필요 할 듯
 
                     emit VaccinationUpdated(
                         _childAddress,
