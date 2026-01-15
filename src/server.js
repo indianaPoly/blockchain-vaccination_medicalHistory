@@ -1,35 +1,49 @@
-import e from "express";
+import express from "express";
 import cors from "cors";
 import fs from "fs";
 import https from "https";
+import { config } from "./config/config.js";
 import childRoutes from "./routes/childRoutes.js";
 
-const app = e();
+const app = express();
 app.use(cors());
-app.use(e.json());
+app.use(express.json());
 
 app.use("/contract", childRoutes);
 
-const HTTP_PORT = 8080;
-const HTTPS_PORT = 8081;
+const { http: httpPort, https: httpsPort } = config.ports;
 
-app.listen(HTTP_PORT, () => {
-  console.log(`Server is running on port ${HTTP_PORT}`);
+app.listen(httpPort, () => {
+  console.log(`Server is running on port ${httpPort}`);
 });
 
-// HTTPS server
-const domainName = process.env.DOMAIN_NAME;
-try {
-  const keyFile = fs.readFileSync(`/etc/letsencrypt/live/${domainName}/privkey.pem`);
-  const certFile = fs.readFileSync(`/etc/letsencrypt/live/${domainName}/fullchain.pem`);
+const startHttpsServer = () => {
+  if (!config.domainName) {
+    console.warn("DOMAIN_NAME is not set. Skipping HTTPS server startup.");
+    return;
+  }
+
+  const keyFile = fs.readFileSync(
+    `/etc/letsencrypt/live/${config.domainName}/privkey.pem`
+  );
+  const certFile = fs.readFileSync(
+    `/etc/letsencrypt/live/${config.domainName}/fullchain.pem`
+  );
+
   const options = {
     key: keyFile,
     cert: certFile,
   };
 
-  https.createServer(options, app).listen(HTTPS_PORT, () => {
-    console.log(`Server is running on port ${HTTPS_PORT}`);
+  https.createServer(options, app).listen(httpsPort, () => {
+    console.log(`Server is running on port ${httpsPort}`);
   });
+};
+
+try {
+  startHttpsServer();
 } catch (error) {
-  console.error(`There was a problem while running the server on HTTPS - message: ${error}`);
+  console.error(
+    `There was a problem while running the server on HTTPS - message: ${error}`
+  );
 }

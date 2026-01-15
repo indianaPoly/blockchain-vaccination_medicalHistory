@@ -1,15 +1,40 @@
 import hre from "hardhat";
 import { ethersService } from "../utils/ethersService.js";
 
+const CONTRACT_NAME = "parentChildRelationship";
+
+const parseSignature = (signature) =>
+  hre.ethers.Signature.from(signature);
+
+const buildTransactionPayload = (contract, receipt) => {
+  const contractAddress = contract.target?.toLowerCase();
+  const events = receipt.logs
+    .filter((log) => log.address?.toLowerCase() === contractAddress)
+    .map((log) => contract.interface.parseLog(log));
+
+  return {
+    transactionHash: receipt.hash,
+    events,
+  };
+};
+
+const handleError = (res, message, error) => {
+  console.error(message, error);
+  res.status(500).json({
+    success: false,
+    error: error.message,
+  });
+};
+
 export class ChildController {
-  test = async (req, res) => {
+  async test(req, res) {
     res.json({
       success: true,
       data: {
         value: "hi",
       },
     });
-  };
+  }
 
   /*
   {
@@ -20,18 +45,13 @@ export class ChildController {
     "weight": 20.1 (number)
   }
   */
-  createChild = async (req, res) => {
+  async createChild(req, res) {
     try {
       const { parent, childName, birthDate, height, weight, signature } =
         req.body;
 
-      // contract
-      const ethersServiceInstance = new ethersService();
-      const contract = await ethersServiceInstance.getContract(
-        "parentChildRelationship"
-      );
-
-      const { v, r, s } = hre.ethers.Signature.from(signature);
+      const contract = ethersService.getContract(CONTRACT_NAME);
+      const { v, r, s } = parseSignature(signature);
 
       const tx = await contract.executeMetaCreateChild(
         parent,
@@ -47,29 +67,20 @@ export class ChildController {
       const receipt = await tx.wait();
       res.json({
         success: true,
-        data: {
-          transactionHash: receipt.hash,
-          events: receipt.logs.map((log) => contract.interface.parseLog(log)),
-        },
+        data: buildTransactionPayload(contract, receipt),
       });
     } catch (error) {
-      console.error("Error creating child:", error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      handleError(res, "Error creating child:", error);
     }
-  };
+  }
 
-  updateHealthInfo = async (req, res) => {
+  async updateHealthInfo(req, res) {
     try {
       const { parent, childAddress, height, weight } = req.body;
-      const contract = await ethersService.getContract(
-        "parentChildRelationship"
-      );
+      const contract = ethersService.getContract(CONTRACT_NAME);
 
       const nonce = await contract.getNonce(parent);
-      const chainId = (await ethersService.provider.getNetwork()).chainId;
+      const chainId = (await ethersService.getProvider().getNetwork()).chainId;
 
       const domain = {
         name: "ParentChildRelationshipWithMeta",
@@ -96,9 +107,9 @@ export class ChildController {
         nonce,
       };
 
-      const wallet = new ethers.Wallet(ethersService.wallet.privateKey);
+      const wallet = ethersService.getWallet();
       const signature = await wallet.signTypedData(domain, types, value);
-      const { v, r, s } = ethers.Signature.from(signature);
+      const { v, r, s } = parseSignature(signature);
 
       const tx = await contract.executeMetaSetHealthInformation(
         parent,
@@ -113,21 +124,14 @@ export class ChildController {
       const receipt = await tx.wait();
       res.json({
         success: true,
-        data: {
-          transactionHash: receipt.hash,
-          events: receipt.logs.map((log) => contract.interface.parseLog(log)),
-        },
+        data: buildTransactionPayload(contract, receipt),
       });
     } catch (error) {
-      console.error("Error updating health info:", error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      handleError(res, "Error updating health info:", error);
     }
-  };
+  }
 
-  addMedicalHistory = async (req, res) => {
+  async addMedicalHistory(req, res) {
     try {
       const {
         parent,
@@ -141,12 +145,8 @@ export class ChildController {
         signature,
       } = req.body;
 
-      const ethersServiceInstance = new ethersService();
-      const contract = await ethersServiceInstance.getContract(
-        "parentChildRelationship"
-      );
-
-      const { v, r, s } = hre.ethers.Signature.from(signature);
+      const contract = ethersService.getContract(CONTRACT_NAME);
+      const { v, r, s } = parseSignature(signature);
 
       const tx = await contract.executeMetaAddMedicalHistory(
         parent,
@@ -165,21 +165,14 @@ export class ChildController {
       const receipt = await tx.wait();
       res.json({
         success: true,
-        data: {
-          transactionHash: receipt.hash,
-          events: receipt.logs.map((log) => contract.interface.parseLog(log)),
-        },
+        data: buildTransactionPayload(contract, receipt),
       });
     } catch (error) {
-      console.error("Error adding medical history:", error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      handleError(res, "Error adding medical history:", error);
     }
-  };
+  }
 
-  updateVaccination = async (req, res) => {
+  async updateVaccination(req, res) {
     try {
       const {
         parent,
@@ -190,12 +183,8 @@ export class ChildController {
         signature,
       } = req.body;
 
-      const ethersServiceInstance = new ethersService();
-      const contract = await ethersServiceInstance.getContract(
-        "parentChildRelationship"
-      );
-
-      const { v, r, s } = hre.ethers.Signature.from(signature);
+      const contract = ethersService.getContract(CONTRACT_NAME);
+      const { v, r, s } = parseSignature(signature);
 
       const tx = await contract.executeMetaUpdateVaccination(
         parent,
@@ -211,19 +200,12 @@ export class ChildController {
       const receipt = await tx.wait();
       res.json({
         success: true,
-        data: {
-          transactionHash: receipt.hash,
-          events: receipt.logs.map((log) => contract.interface.parseLog(log)),
-        },
+        data: buildTransactionPayload(contract, receipt),
       });
     } catch (error) {
-      console.error("Error updating vaccination:", error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      handleError(res, "Error updating vaccination:", error);
     }
-  };
+  }
 
   // const vaccinations = [
   //   {
@@ -237,16 +219,12 @@ export class ChildController {
   //     administerDate: toUnixTimestamp("20241010"),
   //   },
   // ];
-  updateMultipleVaccinations = async (req, res) => {
+  async updateMultipleVaccinations(req, res) {
     try {
       const { parent, childAddress, vaccinations, signature } = req.body;
 
-      const ethersServiceInstance = new ethersService();
-      const contract = await ethersServiceInstance.getContract(
-        "parentChildRelationship"
-      );
-
-      const { v, r, s } = hre.ethers.Signature.from(signature);
+      const contract = ethersService.getContract(CONTRACT_NAME);
+      const { v, r, s } = parseSignature(signature);
 
       const tx = await contract.executeMetaUpdateMultipleVaccination(
         parent,
@@ -260,17 +238,10 @@ export class ChildController {
       const receipt = await tx.wait();
       res.json({
         success: true,
-        data: {
-          transactionHash: receipt.hash,
-          events: receipt.logs.map((log) => contract.interface.parseLog(log)),
-        },
+        data: buildTransactionPayload(contract, receipt),
       });
     } catch (error) {
-      console.error("Error updating multiple vaccinations:", error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      handleError(res, "Error updating multiple vaccinations:", error);
     }
-  };
+  }
 }

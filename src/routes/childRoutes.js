@@ -1,7 +1,7 @@
-import e from "express";
+import express from "express";
 import { ChildController } from "../controllers/childController.js";
 
-const router = e.Router();
+const router = express.Router();
 const childController = new ChildController();
 
 router.get("/test", childController.test);
