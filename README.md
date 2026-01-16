@@ -56,6 +56,67 @@ EIP-712를 적용한 주요 이유는 다음과 같습니다:
 * **피싱 공격 방지**: 도메인별 서명 구분을 통해 피싱 공격의 위험을 줄입니다.
 * **추가 보안 계층 제공**: 민감한 의료 데이터의 보안을 더욱 강화합니다.
 
+## ⌘ 로컬 개발 및 실행
+
+### 1) 환경 변수 설정
+
+루트 디렉터리에 `.env` 파일을 생성하고 아래 값을 설정합니다:
+
+```bash
+INFURA_API_KEY=your_infura_key
+PRIVATE_KEY=your_private_key
+PARENT_CHILD_RELATIONSHIP_ADDRESS=0x...
+DOMAIN_NAME=your.domain
+HTTP_PORT=8080
+HTTPS_PORT=8081
+```
+
+* `DOMAIN_NAME`을 지정하면 LetsEncrypt 인증서를 읽어 HTTPS 서버를 시작합니다.
+* `HTTP_PORT`와 `HTTPS_PORT`는 미지정 시 각각 8080/8081 포트를 사용합니다.
+
+### 2) 의존성 설치
+
+```bash
+npm install
+```
+
+### 3) 서버 실행
+
+```bash
+npm start
+```
+
+기본적으로 `http://localhost:8080/contract` 경로에서 API를 제공합니다.
+
+## ⌘ API 개요
+
+모든 API는 JSON 요청/응답을 사용합니다.
+
+| Method | Endpoint | 설명 |
+| --- | --- | --- |
+| GET | `/contract/test` | 서버 연결 테스트 |
+| POST | `/contract/create` | 자녀 생성 메타 트랜잭션 |
+| POST | `/contract/health/update` | 키/몸무게 갱신 메타 트랜잭션 |
+| POST | `/contract/medical/add` | 진료 기록 추가 메타 트랜잭션 |
+| POST | `/contract/vaccination/update` | 예방접종 갱신 메타 트랜잭션 |
+| POST | `/contract/vaccination/updateMulti` | 예방접종 일괄 갱신 메타 트랜잭션 |
+
+### 요청 예시
+
+```json
+{
+  "parent": "0x...",
+  "childAddress": "0x...",
+  "medicalType": 0,
+  "visitedName": "OO병원",
+  "timestamp": 1700000000,
+  "doctorName": "홍길동",
+  "symptoms": "기침",
+  "diagnosisDetails": "감기",
+  "signature": "0x..."
+}
+```
+
 ## ⌘ 동작 링크
 
 PAWPAW 프로젝트의 동작을 다음 데모 영상에서 확인하실 수 있습니다:

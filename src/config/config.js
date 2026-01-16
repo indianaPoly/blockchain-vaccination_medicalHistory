@@ -1,15 +1,20 @@
 import dotenv from "dotenv";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config({
   path: new URL("../../.env", import.meta.url),
 });
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const parsePort = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
 
 export const config = {
-  port: 8000,
+  ports: {
+    http: parsePort(process.env.HTTP_PORT, 8080),
+    https: parsePort(process.env.HTTPS_PORT, 8081),
+  },
+  domainName: process.env.DOMAIN_NAME,
   rpcURL: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
   privateKey: process.env.PRIVATE_KEY,
   contracts: {
